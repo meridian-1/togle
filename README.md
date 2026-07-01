@@ -1,75 +1,76 @@
-# React + TypeScript + Vite
+# Spotystat — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Фронтенд аналитики Spotify на **React 19 + TypeScript + Vite**, стилизованный
+через **Tailwind CSS v4**. Дизайн-система — «Luminous Data» (glassmorphism),
+её токены описаны в [`DESIGN.md`](./DESIGN.md).
 
-Currently, two official plugins are available:
+## Запуск
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+bun install      # или npm install
+bun run dev      # dev-сервер на http://localhost:5173
+bun run build    # прод-сборка (tsc + vite)
+bun run lint     # проверка ESLint
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Структура
 
 ```
+src/
+├── main.tsx                 # точка входа
+├── App.tsx                  # роутинг + AuthProvider
+├── index.css                # Tailwind v4 + дизайн-токены (@theme) + стекло
+├── lib/
+│   └── api.ts               # axios-клиент (baseURL, куки, токен, 401)
+├── services/
+│   └── authService.ts       # запросы аутентификации к Django
+├── context/
+│   └── AuthContext.tsx       # глобальное состояние авторизации
+├── hooks/
+│   ├── useAuth.ts           # доступ к контексту авторизации
+│   └── useTilt.ts           # 3D-наклон стеклянной карточки
+├── types/
+│   └── auth.ts              # типы User / AuthState
+└── components/
+    ├── LoginPage.tsx        # экран входа (собирает всё вместе)
+    ├── AuthCard.tsx         # стеклянная карточка с кнопкой входа
+    ├── MeshBackground.tsx   # фоновый mesh-градиент
+    ├── Footer.tsx           # футер
+    └── Icon.tsx             # обёртка Material Symbols
+```
+
+## Связь с Django-бэкендом
+
+Слой API уже подготовлен:
+
+- **`src/lib/api.ts`** — единый axios-клиент. В dev-режиме все запросы идут на
+  `/api`, который Vite проксирует на `http://127.0.0.1:8000`
+  (см. `vite.config.ts`). Клиент шлёт куки (`withCredentials`), поддерживает
+  Django CSRF (`X-CSRFToken`) и автоматически подставляет `Bearer`-токен, если
+  он сохранён (для JWT/DRF Token). На ответ `401` токен очищается.
+- **`src/services/authService.ts`** — конкретные эндпоинты. Сейчас там
+  **предполагаемые** пути, поправьте их под ваши реальные Django-роуты:
+  - `GET  /api/auth/spotify/login/` → `{ authorizationUrl }` — шаг 1 OAuth
+  - `GET  /api/auth/me/` → текущий пользователь
+  - `POST /api/auth/logout/`
+
+### Переменные окружения
+
+Для прод-сборки базовый URL API можно переопределить в `.env`:
+
+```
+VITE_API_BASE_URL=https://api.example.com
+```
+
+Если переменная не задана — используется относительный `/api`.
+
+## Аутентификация (Spotify OAuth)
+
+Поток задуман так:
+
+1. Пользователь жмёт **Login with Spotify** → `AuthContext.login()`.
+2. Фронт спрашивает у Django ссылку авторизации и редиректит на Spotify.
+3. Spotify возвращает пользователя на Django-callback, бэкенд ставит сессию
+   (или отдаёт токен) и редиректит обратно на фронт.
+4. При загрузке приложения `AuthProvider` дёргает `/api/auth/me/` и
+   восстанавливает сессию.
