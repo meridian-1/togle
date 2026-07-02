@@ -1,5 +1,4 @@
 import Icon from './Icon'
-import { useTilt } from '../hooks/useTilt'
 import { useAuth } from '../hooks/useAuth'
 
 // Аватары «сообщества». Позже можно заменить на реальные данные с бэкенда.
@@ -10,13 +9,11 @@ const AVATARS = [
 ]
 
 export default function AuthCard() {
-  const tiltRef = useTilt<HTMLDivElement>()
   const { login, isLoading, error } = useAuth()
 
   return (
     <div
-      ref={tiltRef}
-      className="polished-glass group w-full max-w-xl rounded-3xl p-8 transition-[background-color] duration-500 hover:bg-white/[0.06] md:p-14"
+      className="polished-glass group w-full max-w-xl rounded-3xl p-8 transition-colors duration-500 hover:bg-white/[0.04] md:p-14"
     >
       <div className="mb-6 flex items-center gap-4">
         <h1 className="font-display-lg text-display-lg-mobile tracking-tighter text-primary md:text-display-lg">

@@ -4,7 +4,7 @@ import Footer from './Footer'
 
 export default function LoginPage() {
   return (
-    <div className="grainy-overlay flex min-h-screen flex-col overflow-x-hidden bg-surface-container-lowest font-body-base text-on-surface">
+    <div className="grainy-overlay flex min-h-screen flex-col overflow-x-hidden font-body-base text-on-surface">
       <MeshBackground />
 
       <main className="relative z-10 flex flex-grow items-center justify-center px-gutter py-16 md:px-container-padding-desktop">
